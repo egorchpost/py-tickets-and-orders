@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -64,7 +65,7 @@ class User(AbstractUser):
 
 
 class Order(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -74,7 +75,8 @@ class Order(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
-        return f"<Order: {self.created_at}>"
+        # return f"<Order: {self.created_at}>"
+        return str(self.created_at)
 
 
 class Ticket(models.Model):
@@ -94,12 +96,18 @@ class Ticket(models.Model):
 
         if self.row < 1 or self.row > hall.rows:
             raise ValidationError({
-                "row": "Invalid row number."
+                "row": (
+                    f"row number must be in available range: "
+                    f"(1, rows): (1, {hall.rows})"
+                )
             })
 
-        if self.seat < 1 or self.seat > hall.seats:
+        if self.seat < 1 or self.seat > hall.seats_in_row:
             raise ValidationError({
-                "seat": "Invalid seat number."
+                "seat": (
+                    f"seat number must be in available range: "
+                    f"(1, seats_in_row): (1, {hall.seats_in_row})"
+                )
             })
 
     def save(self, *args: list, **kwargs: dict) -> None:
@@ -108,8 +116,8 @@ class Ticket(models.Model):
 
     def __str__(self) -> str:
         return (
-            f"<Ticket: {self.movie_session} (row {self.row}, "
-            f"seat {self.seat})>"
+            f"{self.movie_session} (row: {self.row}, "
+            f"seat: {self.seat})"
         )
 
     class Meta:
